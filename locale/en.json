@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Memory rule hints",
+    "description": "Shows memory entries and rules that match what you are typing, above the composer, so you can spot a constraint before sending.",
+    "detail": "docs/DETAIL.md"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "dsh-memory-hint",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Show the rules and preferences that match what you are typing, above the DeepSeek Harness composer. Local matching, no model calls.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "memory",
+    "rules",
+    "composer",
+    "hint"
+  ],
+  "author": "caopeihua",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caopeihuaaini/dsh-memory-hint.git"
+  },
+  "homepage": "https://github.com/caopeihuaaini/dsh-memory-hint#readme",
+  "bugs": {
+    "url": "https://github.com/caopeihuaaini/dsh-memory-hint/issues"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-chat"
+      ]
+    }
+  }
+}

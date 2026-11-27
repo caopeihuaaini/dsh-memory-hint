@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Memory rule hints">
+  <rect width="64" height="64" rx="14" fill="#0d1b26"/>
+  <g fill="none" stroke="#7cc4ff" stroke-width="3" stroke-linecap="round">
+    <circle cx="27" cy="27" r="12"/>
+    <path d="M36 36l9 9"/>
+  </g>
+  <g stroke="#9dd67a" stroke-width="3" stroke-linecap="round">
+    <path d="M21 23h12"/>
+    <path d="M21 29h9"/>
+  </g>
+</svg>

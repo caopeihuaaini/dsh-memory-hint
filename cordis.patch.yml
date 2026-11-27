@@ -1,0 +1,9 @@
+- insert:
+    - id: memory-hint
+      name: '@local/dsh-memory-hint'
+      config:
+        # 记忆镜像目录（mneme 写入的 md 文件）；留空则用 $DSH_HOME/memory
+        dir: !!js process.env.DSH_HOME ? `${process.env.DSH_HOME}\\memory` : undefined
+        limit: 3
+        minScore: 0.18
+        # 匹配走插件目录下的 triggers.json（离线意图标注）；缺失时自动退回正文关键词匹配

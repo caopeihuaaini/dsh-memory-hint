@@ -8,18 +8,7 @@ window.__ModuleLoader__.load({
       ReactDOM = require('react-dom');
     } catch {}
 
-    const state = {
-      items: [],
-      error: '',
-      setup: false,
-      bound: null,
-      label: '',
-      picking: false,
-      candidates: [],
-      busy: false,
-      customDir: '',
-      rect: null,
-    };
+    const state = { items: [], error: '', setup: false, open: false, rect: null };
     const listeners = new Set();
     const emit = () => {
       for (const fn of listeners) {
@@ -46,7 +35,7 @@ window.__ModuleLoader__.load({
       const nodes = document.querySelectorAll('[contenteditable="true"]');
       return nodes.length ? nodes[nodes.length - 1] : null;
     };
-
+    const readText = (el) => String((el && el.innerText) || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     const measure = () => {
       const el = findComposer();
       if (!el) return;
@@ -55,44 +44,24 @@ window.__ModuleLoader__.load({
       setState({ rect: { top: r.top, left: r.left, width: r.width } });
     };
 
-    const readText = (el) => String((el && el.innerText) || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
-
-    const S = {
-      box: { borderRadius: '9px', background: 'rgba(8,24,36,0.97)', border: '1px solid rgba(127,212,255,0.35)', boxShadow: '0 6px 20px rgba(0,0,0,0.45)' },
-      chip: {
-        all: 'unset',
-        cursor: 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '4px 10px',
-        borderRadius: '8px',
-        fontSize: '12px',
-        fontWeight: 600,
-        color: '#bfe6ff',
-        background: 'rgba(16,44,64,0.95)',
-        border: '1px solid rgba(127,212,255,0.5)',
-      },
-      muted: { color: 'rgba(200,224,240,0.7)', fontSize: '11px' },
-      row: { display: 'flex', gap: '6px', alignItems: 'baseline' },
-      opt: {
-        all: 'unset',
-        cursor: 'pointer',
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '10px',
-        padding: '6px 8px',
-        borderRadius: '7px',
-        background: 'rgba(127,212,255,0.08)',
-      },
+    const chip = {
+      all: 'unset',
+      cursor: 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      padding: '4px 10px',
+      borderRadius: '8px',
+      fontSize: '12px',
+      fontWeight: 600,
+      color: '#bfe6ff',
+      background: 'rgba(16,44,64,0.95)',
+      border: '1px solid rgba(127,212,255,0.5)',
     };
 
     function Panel() {
       const s = useStore();
-
-      // 绑定引导：未绑定规则库时始终显示，提醒用户去选
-      const showSetup = s.setup && !s.picking;
-      if (!s.items.length && !s.error && !showSetup && !s.picking) return null;
+      if (!s.items.length && !s.error && !s.setup) return null;
 
       const r = s.rect;
       const wrap = {
@@ -108,93 +77,26 @@ window.__ModuleLoader__.load({
         color: '#e8f4ff',
       };
 
-      const openPicker = async () => {
-        setState({ picking: true, busy: true });
-        try {
-          const res = await fetch('/api/dsh-memory-hint/sources', { headers: { accept: 'application/json' } });
-          const data = await res.json();
-          setState({ candidates: Array.isArray(data.candidates) ? data.candidates : [], busy: false });
-        } catch (e) {
-          setState({ busy: false, error: String((e && e.message) || e) });
-        }
-      };
-
-      const bind = async (id, dir) => {
-        setState({ busy: true });
-        try {
-          const res = await fetch('/api/dsh-memory-hint/bind', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ id, dir }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            setState({ busy: false, error: data.error || `HTTP ${res.status}` });
-            return;
-          }
-          setState({ busy: false, picking: false, setup: false, bound: data.bound, label: data.label, error: '', items: [] });
-          measure();
-        } catch (e) {
-          setState({ busy: false, error: String((e && e.message) || e) });
-        }
-      };
-
       let inner;
-      if (s.picking) {
+      if (!s.items.length && s.error) {
         inner = h(
           'div',
-          { style: { ...S.box, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' } },
-          h('div', { style: { fontWeight: 600 } }, '选择记忆库'),
-          s.busy && !s.candidates.length ? h('div', { style: S.muted }, '正在探测…') : null,
-          ...s.candidates.map((c) =>
-            h(
-              'button',
-              { key: c.id, type: 'button', style: S.opt, onClick: () => bind(c.id), disabled: s.busy },
-              h('span', null, c.label),
-              h('span', { style: S.muted }, `${c.count} 条`),
-            ),
-          ),
-          !s.busy && !s.candidates.length ? h('div', { style: S.muted }, '没有检测到可用的规则文件') : null,
-          h(
-            'div',
-            { style: { ...S.row, marginTop: '2px' } },
-            h('input', {
-              value: s.customDir,
-              placeholder: '自定义目录，例如 D:\\rules',
-              onChange: (e) => setState({ customDir: e.target.value }),
-              style: {
-                flex: 1,
-                minWidth: 0,
-                padding: '4px 7px',
-                borderRadius: '6px',
-                border: '1px solid rgba(127,212,255,0.35)',
-                background: 'rgba(0,0,0,0.35)',
-                color: '#e8f4ff',
-                font: 'inherit',
-              },
-            }),
-            h('button', { type: 'button', style: { ...S.chip, padding: '4px 9px' }, onClick: () => bind('custom', s.customDir) }, '绑定'),
-            h('button', { type: 'button', style: { ...S.chip, background: 'transparent', border: '1px solid rgba(127,212,255,0.25)' }, onClick: () => setState({ picking: false }) }, '取消'),
-          ),
-          h('div', { style: S.muted }, '规则文件用 Markdown：每条以「## 标题」开头，或「§」分隔，或「- 条目」列表。'),
+          { style: { padding: '5px 9px', borderRadius: '8px', background: 'rgba(74,20,20,0.95)', border: '1px solid rgba(255,138,138,0.5)', color: '#ff9a9a', fontSize: '11px' }, title: s.error },
+          `⚑ 记忆提示不可用：${s.error}`,
         );
-      } else if (showSetup) {
+      } else if (!s.items.length) {
         inner = h(
-          'button',
-          { type: 'button', style: S.chip, onClick: openPicker, title: '选择要读取的记忆库' },
-          h('span', null, '⚑'),
-          h('span', null, '未绑定记忆库'),
-          h('span', { style: { opacity: 0.7, fontWeight: 400 } }, '选择'),
+          'div',
+          { style: { ...chip, cursor: 'default', fontSize: '11px', fontWeight: 400, opacity: 0.8 }, title: '在插件配置里设置 dir 指向规则目录' },
+          '⚑ 未绑定记忆库：在插件配置里设置 dir',
         );
-      } else if (!s.items.length && s.error) {
-        inner = h('div', { style: { ...S.box, padding: '5px 9px', color: '#ff9a9a', borderColor: 'rgba(255,138,138,0.5)', fontSize: '11px' }, title: s.error }, `⚑ 记忆提示不可用：${s.error}`);
       } else {
         inner = h(
           'div',
           { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
           h(
             'button',
-            { type: 'button', onClick: () => setState({ open: !s.open }), style: { ...S.chip, alignSelf: 'flex-start' } },
+            { type: 'button', style: { ...chip, alignSelf: 'flex-start' }, onClick: () => setState({ open: !s.open }) },
             h('span', null, '⚑'),
             h('span', null, `相关规则 ${s.items.length} 条`),
             h('span', { style: { opacity: 0.65, fontWeight: 400 } }, s.open ? '收起' : '展开'),
@@ -202,13 +104,13 @@ window.__ModuleLoader__.load({
           s.open
             ? h(
                 'div',
-                { style: { ...S.box, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '7px', maxHeight: '240px', overflowY: 'auto' } },
+                { style: { padding: '8px 10px', borderRadius: '9px', background: 'rgba(8,24,36,0.97)', border: '1px solid rgba(127,212,255,0.3)', boxShadow: '0 6px 20px rgba(0,0,0,0.45)', display: 'flex', flexDirection: 'column', gap: '7px', maxHeight: '240px', overflowY: 'auto' } },
                 ...s.items.map((it, i) =>
                   h(
                     'div',
                     { key: `${i}-${it.title}` },
-                    h('div', { style: S.row }, h('span', { style: { fontWeight: 600, color: '#f0f8ff' } }, it.title)),
-                    it.body ? h('div', { style: S.muted }, it.body.slice(0, 180) + (it.body.length > 180 ? '…' : '')) : null,
+                    h('div', { style: { fontWeight: 600, color: '#f0f8ff' } }, it.title),
+                    it.body ? h('div', { style: { color: 'rgba(200,224,240,0.75)', fontSize: '11px' } }, it.body.slice(0, 180) + (it.body.length > 180 ? '…' : '')) : null,
                   ),
                 ),
               )
@@ -217,28 +119,30 @@ window.__ModuleLoader__.load({
       }
 
       const node = h('div', { style: wrap }, inner);
-      if (ReactDOM && typeof ReactDOM.createPortal === 'function') return ReactDOM.createPortal(node, document.body);
+      if (ReactDOM && typeof ReactDOM.createPortal === 'function') {
+        return ReactDOM.createPortal(node, document.body);
+      }
       return node;
     }
 
     return {
       inject: ['slots'],
       apply(ctx) {
-        const clearHint = () => {
-          if (state.items.length || state.error || state.open) setState({ items: [], error: '', open: false });
-        };
-
         ctx.effect(() => {
           let timer = 0;
           let seq = 0;
           let lastQuery = '';
           let prevText = '';
 
+          const clear = () => {
+            if (state.items.length || state.error) setState({ items: [], error: '' });
+          };
+
           const runSearch = async (text) => {
             const q = text.slice(-300);
             measure();
-            if (q.trim().length < 4) {
-              clearHint();
+            if (q.length < 4) {
+              clear();
               return;
             }
             if (q === lastQuery) return;
@@ -256,8 +160,6 @@ window.__ModuleLoader__.load({
               setState({
                 items: Array.isArray(data.items) ? data.items : [],
                 setup: !!data.setup,
-                bound: data.bound || null,
-                label: data.label || '',
                 error: '',
               });
             } catch (e) {
@@ -271,38 +173,23 @@ window.__ModuleLoader__.load({
             if (text.length < 4) {
               clearTimeout(timer);
               lastQuery = '';
-              clearHint();
+              clear();
               return;
             }
             if (shrunk) {
               clearTimeout(timer);
               lastQuery = '';
-              clearHint();
+              clear();
             }
             clearTimeout(timer);
             timer = setTimeout(() => runSearch(text), shrunk ? 180 : 300);
           };
-
-          // 首屏探测：让"未绑定"提示在用户动手之前就出现
-          (async () => {
-            try {
-              const res = await fetch('/api/dsh-memory-hint/sources', { headers: { accept: 'application/json' } });
-              const data = await res.json();
-              setState({ setup: !data.bound, bound: data.bound || null, candidates: data.candidates || [] });
-            } catch {}
-          })();
 
           const onInput = (event) => {
             const el = event.target;
             if (!el || !el.isContentEditable) return;
             handleText(readText(el));
           };
-          const onFocusOut = (event) => {
-            const el = event.target;
-            if (!el || !el.isContentEditable) return;
-            if (!readText(el)) handleText('');
-          };
-          const onViewportChange = () => measure();
 
           let lastSeen = '';
           const poll = setInterval(() => {
@@ -314,17 +201,16 @@ window.__ModuleLoader__.load({
             handleText(text);
           }, 250);
 
+          const onResize = () => measure();
           document.addEventListener('input', onInput, true);
-          document.addEventListener('focusout', onFocusOut, true);
-          window.addEventListener('resize', onViewportChange);
-          window.addEventListener('scroll', onViewportChange, true);
+          window.addEventListener('resize', onResize);
+          window.addEventListener('scroll', onResize, true);
           return () => {
             clearTimeout(timer);
             clearInterval(poll);
             document.removeEventListener('input', onInput, true);
-            document.removeEventListener('focusout', onFocusOut, true);
-            window.removeEventListener('resize', onViewportChange);
-            window.removeEventListener('scroll', onViewportChange, true);
+            window.removeEventListener('resize', onResize);
+            window.removeEventListener('scroll', onResize, true);
             listeners.clear();
           };
         });

@@ -272,6 +272,7 @@ export function apply(ctx, config = {}) {
 
   ctx.effect(() => {
     const disposers = [];
+    let reqCount = 0;
 
     disposers.push(
       webServer.register({
@@ -280,8 +281,14 @@ export function apply(ctx, config = {}) {
         handler(req, res) {
           try {
             const url = new URL(req.url, "http://127.0.0.1");
-            const items = search(url.searchParams.get("q") || "");
+            const q = url.searchParams.get("q") || "";
+            const items = search(q);
             const { entries } = store();
+            // 调试开关：MH_DEBUG=1 时记录前几次请求，便于区分「没请求」与「没命中」
+            if (process.env.MH_DEBUG === "1" && reqCount < 5) {
+              reqCount++;
+              ctx.logger?.info?.(`[memory-hint] search hits=${items.length} rules=${entries.length} q=${q.slice(0, 24)}`);
+            }
             json(res, 200, {
               bound: binding ? binding.id : null,
               label: binding ? binding.label : null,
